@@ -25,6 +25,9 @@ class TokenType(Enum):
     LPAREN                   = 9 # symbol: (
     RPAREN                   = 10 # symbol: )
 
+    # Substitution symbol - only for internal reasons
+    SUBSTVAR                 = 11 # symbol: None
+
 
 @dataclass
 class Token:

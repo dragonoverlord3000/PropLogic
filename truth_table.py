@@ -1,5 +1,8 @@
 from tokens import Token, TokenType
 
+# The important part is the `truth_table_dict` at the bottom
+
+
 """
 These functions take TokenType.TRUE and TokenType.FALSE as input and returns a new 
 Token of either type TRUE or type FALSE, depending on the input.
@@ -80,6 +83,19 @@ def biconditional_truth_table(a:TokenType, b:TokenType) -> TokenType:
         return Token(TokenType.TRUE)
     else:
         print(f"Error, either token type ('{a.type}') or ;) token type ('{b.type}') is not boolean")
+
+# Relate operator type to their truth table
+truth_table_dict = {
+    TokenType.NEGATION: negation_truth_table,
+    TokenType.CONJUNCTION: conjunction_truth_table,
+    TokenType.DISJUNCTION: disjunction_truth_table,
+    TokenType.IMPLICATION: implication_truth_table,
+    TokenType.CONVERSEIMPLICATION: converse_implication_truth_table,
+    TokenType.BICONDITIONAL: biconditional_truth_table
+}
+
+
+
 
 
 
