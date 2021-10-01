@@ -127,18 +127,12 @@ class Interpreter:
         for n, prop_const in enumerate(prop_vars):
             num_flips = 2**(n + 1)
             num_rows = 2**num_prop_vars
-            bools = [TokenType.TRUE, TokenType.FALSE]
+            bools = [Token(TokenType.TRUE), Token(TokenType.FALSE)]
             col_i = [bools[floor(num_flips/num_rows * x) % 2] for x in range(num_rows)]
             # initial_truth_assignment += [col_i]
             initial_truth_assignment[prop_const.value] = col_i
 
         print(f"\nInitial truth assignment: {initial_truth_assignment}")
-
-        # Calculate the truth value of a column in the truth table - every time some new propositional formula is added to the 'subformulas' list
-        # also calculate the truth of it as a column
-        def calculate_column():
-            pass
-
 
         # So ideally - I should calculate the values in the truth table in this while loop which creates the uppermost rows containing the propositional formulas
         subformulas = []
@@ -146,52 +140,74 @@ class Interpreter:
         identifier = 0
         idx = 0
         while len(temp_RPN) > 1:
+            temp_column = [] # Testing ???
+
             # Handle unary connectives
             if temp_RPN[idx].type in unary_connectives:
                 if temp_RPN[idx - 1].type == TokenType.SUBSTVAR:
-                    ##################################################### Test
+
                     for n in range(2**num_prop_vars):
-                        truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[subformulas[-1]][n])
-                    ##################################################### Test
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 1].value][n]))
 
                     subformulas.append([temp_RPN[idx]] + [subformulas[-1]])
 
-
-
                 elif temp_RPN[idx - 1].type in symbol_types:
-                    ##################################################### Test
+
                     for n in range(2**num_prop_vars):
-                        truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-1].value][n])
-                    ##################################################### Test
-                    
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-1].value][n]))
+
                     subformulas.append([temp_RPN[idx]] + [temp_RPN[idx - 1]])
 
                 else:
                     subformulas.append([temp_RPN[idx]] + [temp_RPN[idx - 1]]) # default
                     print(f"Error, can't take '{temp_RPN[idx]}' of '{temp_RPN[idx - 1]}'")
-                temp_RPN = temp_RPN[:idx - 1] + [Token(TokenType.SUBSTVAR, identifier)] + temp_RPN[idx+1:]
+                substvar = Token(TokenType.SUBSTVAR, identifier)
+                temp_RPN = temp_RPN[:idx - 1] + [substvar] + temp_RPN[idx+1:]
+                initial_truth_assignment[substvar.value] = temp_column # Test
                 identifier += 1
                 idx -= 1 # We remove two characters and add one, so our index should go one back
 
             # Handle binary connectives 
             elif temp_RPN[idx].type in binary_connectives:
+                print(f"\nTemp_RPN type idx1: {temp_RPN[idx-1].type}")
+                print(f"Temp_RPN type idx2: {temp_RPN[idx-2].type}")
+
                 if temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type in symbol_types:
+
+                    for n in range(2**num_prop_vars):
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-2].value][n], initial_truth_assignment[temp_RPN[idx-1].value][n]))
+
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
                 
                 elif temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type == TokenType.SUBSTVAR:
+
+                    for n in range(2**num_prop_vars):
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 2].value][n], initial_truth_assignment[temp_RPN[idx-1].value][n]))
+
                     subformulas.append([subformulas[-1]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
 
                 elif temp_RPN[idx - 1].type == TokenType.SUBSTVAR and temp_RPN[idx - 2].type in symbol_types:
+
+                    for n in range(2**num_prop_vars):
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-1].value][n], initial_truth_assignment[temp_RPN[idx - 2].value][n]))
+
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [subformulas[-1]])
 
                 elif temp_RPN[idx - 1].type == TokenType.SUBSTVAR and temp_RPN[idx - 2].type == TokenType.SUBSTVAR:
+
+                    for n in range(2**num_prop_vars):
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 2].value][n], initial_truth_assignment[temp_RPN[idx - 1].value][n]))
+
                     subformulas.append([subformulas[-2]] + [temp_RPN[idx]] + [subformulas[-1]])
 
                 else:
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [temp_RPN[idx-1]]) # default
                     print(f"Error, can't take '{temp_RPN[idx]}' of '{temp_RPN[idx - 1]}' and '{temp_RPN[idx - 2]}'")
 
-                temp_RPN = temp_RPN[:idx-2] + [Token(TokenType.SUBSTVAR, identifier)] + temp_RPN[idx+1:]
+                substvar = Token(TokenType.SUBSTVAR, identifier)
+                temp_RPN = temp_RPN[:idx-2] + [substvar] + temp_RPN[idx+1:]
+                print(f"temp_column: {temp_column}")
+                initial_truth_assignment[substvar.value] = temp_column # Test
                 identifier += 1
                 idx -= 2 # We remove three characters and add one, so our index should go two back
 
@@ -199,8 +215,9 @@ class Interpreter:
 
         top_row = prop_vars + subformulas
         print(f"\nTop row: {top_row}")
-        
-
+        print(f"\nTruth table: {initial_truth_assignment}")
+        # print(f"\nSubstvars: {substvars}")
+        print(f"\nSubformulas: {subformulas}")
         # Table should be (2**num_prop_vars + 1) x (num_prop_vars + num_connectives)
 
     def minimal_truth_table(self, style="array"):
