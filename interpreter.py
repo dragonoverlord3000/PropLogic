@@ -1,4 +1,6 @@
 ##### IMPORTS #####
+import numpy as np
+
 from truth_table import truth_table_dict
 from tokens import TokenType, Token
 from math import floor
@@ -103,8 +105,11 @@ class Interpreter:
 
         Note: I could just use `self.calculate_truth_assignment` on all permutations of truth assignments,
         but that would be a very ineffective solution since I would be calculating every truth value from
-        the beginning every time.
+        the beginning every time - so this implementation is more effective.
         """
+
+        # https://github.com/JAEarly/latextable and https://colab.research.google.com/drive/1Iq10lHznMngg1-Uoo-QtpTPii1JDYSQA?usp=sharing#scrollTo=K7NNR1Vg40Vo
+
         RPN = self.RPN_input
         prop_vars_temp = [var for var in RPN if var.type == TokenType.PROPVAR]
         prop_var_vals, prop_vars = [], []
@@ -122,17 +127,15 @@ class Interpreter:
 
         # Populate the first columns with all possible permutations of initial truth assignments
         # Note that a dictionary is used since it's easier to refer to a specific column this way
-        initial_truth_assignment = {}
-        # initial_truth_assignment = []
+        truth_table = {}
         for n, prop_const in enumerate(prop_vars):
             num_flips = 2**(n + 1)
             num_rows = 2**num_prop_vars
             bools = [Token(TokenType.TRUE), Token(TokenType.FALSE)]
             col_i = [bools[floor(num_flips/num_rows * x) % 2] for x in range(num_rows)]
-            # initial_truth_assignment += [col_i]
-            initial_truth_assignment[prop_const.value] = col_i
+            truth_table[prop_const.value] = col_i
 
-        print(f"\nInitial truth assignment: {initial_truth_assignment}")
+        print(f"\nInitial truth assignment: {truth_table}")
 
         # So ideally - I should calculate the values in the truth table in this while loop which creates the uppermost rows containing the propositional formulas
         subformulas = []
@@ -147,14 +150,14 @@ class Interpreter:
                 if temp_RPN[idx - 1].type == TokenType.SUBSTVAR:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx - 1].value][n]))
 
                     subformulas.append([temp_RPN[idx]] + [subformulas[-1]])
 
                 elif temp_RPN[idx - 1].type in symbol_types:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx-1].value][n]))
 
                     subformulas.append([temp_RPN[idx]] + [temp_RPN[idx - 1]])
 
@@ -163,7 +166,7 @@ class Interpreter:
                     print(f"Error, can't take '{temp_RPN[idx]}' of '{temp_RPN[idx - 1]}'")
                 substvar = Token(TokenType.SUBSTVAR, identifier)
                 temp_RPN = temp_RPN[:idx - 1] + [substvar] + temp_RPN[idx+1:]
-                initial_truth_assignment[substvar.value] = temp_column # Test
+                truth_table[substvar.value] = temp_column # Test
                 identifier += 1
                 idx -= 1 # We remove two characters and add one, so our index should go one back
 
@@ -175,28 +178,28 @@ class Interpreter:
                 if temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type in symbol_types:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-2].value][n], initial_truth_assignment[temp_RPN[idx-1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx-2].value][n], truth_table[temp_RPN[idx-1].value][n]))
 
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
                 
                 elif temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type == TokenType.SUBSTVAR:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 2].value][n], initial_truth_assignment[temp_RPN[idx-1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx - 2].value][n], truth_table[temp_RPN[idx-1].value][n]))
 
                     subformulas.append([subformulas[-1]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
 
                 elif temp_RPN[idx - 1].type == TokenType.SUBSTVAR and temp_RPN[idx - 2].type in symbol_types:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx-1].value][n], initial_truth_assignment[temp_RPN[idx - 2].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx-1].value][n], truth_table[temp_RPN[idx - 2].value][n]))
 
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [subformulas[-1]])
 
                 elif temp_RPN[idx - 1].type == TokenType.SUBSTVAR and temp_RPN[idx - 2].type == TokenType.SUBSTVAR:
 
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](initial_truth_assignment[temp_RPN[idx - 2].value][n], initial_truth_assignment[temp_RPN[idx - 1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx - 2].value][n], truth_table[temp_RPN[idx - 1].value][n]))
 
                     subformulas.append([subformulas[-2]] + [temp_RPN[idx]] + [subformulas[-1]])
 
@@ -207,7 +210,7 @@ class Interpreter:
                 substvar = Token(TokenType.SUBSTVAR, identifier)
                 temp_RPN = temp_RPN[:idx-2] + [substvar] + temp_RPN[idx+1:]
                 print(f"temp_column: {temp_column}")
-                initial_truth_assignment[substvar.value] = temp_column # Test
+                truth_table[substvar.value] = temp_column # Test
                 identifier += 1
                 idx -= 2 # We remove three characters and add one, so our index should go two back
 
@@ -215,12 +218,39 @@ class Interpreter:
 
         top_row = prop_vars + subformulas
         print(f"\nTop row: {top_row}")
-        print(f"\nTruth table: {initial_truth_assignment}")
-        # print(f"\nSubstvars: {substvars}")
+        print(f"\nTruth table: {truth_table}")
         print(f"\nSubformulas: {subformulas}")
         # Table should be (2**num_prop_vars + 1) x (num_prop_vars + num_connectives)
 
+        return truth_table, top_row
+
+    def truth_table_converter(self, truth_table,  top_row="first_row", convert_from=list, convert_to="latex"):
+        """
+        Args:
+            truth_table (list, np.array): the truth table to convert
+            top_row (str, list): list with the top row or string specifying the top row - the top row will act as a header
+            convert_from (type, str): type of truth table to convert from e.g. list
+            convert_to (type, str): type of truth table to convert to e.g. latex
+
+        Returns (list, np.array, str):
+            The type specified in the 'convert_to' parameter
+        """
+
+        header = []
+        if isinstance(top_row, (list, np.array)):
+            header = top_row
+        elif top_row == "first_row":
+            pass
+
+        if np.array in convert_from or list in convert_from:
+            if convert_to == "latex":
+                pass
+            pass
+
+        pass
+
     def minimal_truth_table(self, style="array"):
+        # Could just run 'setup_truth_table' and then interpret the result
         pass
 
     def create_parse_tree(self) -> str:
@@ -230,6 +260,8 @@ class Interpreter:
         pass
 
     def tableau_method(self) -> str:
+        # https://plotly.com/python/tree-plots/
+        # https://github.com/JAEarly/latextable
         pass
 
     def check_tautology(self) -> bool:
