@@ -6,6 +6,8 @@ from tokens import TokenType, Token
 from math import floor
 import time
 
+from tabulate import tabulate
+
 ##### VARIABLES #####
 connectives = [TokenType.NEGATION, TokenType.CONJUNCTION, TokenType.DISJUNCTION, 
                   TokenType.IMPLICATION, TokenType.CONVERSEIMPLICATION,
@@ -224,7 +226,7 @@ class Interpreter:
 
         return truth_table, top_row
 
-    def truth_table_converter(self, truth_table,  top_row="first_row", convert_from=list, convert_to="latex"):
+    def truth_table_converter(self, truth_table,  top_row="firstrow", convert_from=list, convert_to="latex"):
         """
         Args:
             truth_table (list, np.array): the truth table to convert
@@ -236,15 +238,15 @@ class Interpreter:
             The type specified in the 'convert_to' parameter
         """
 
-        header = []
+        headers = []
         if isinstance(top_row, (list, np.array)):
-            header = top_row
-        elif top_row == "first_row":
-            pass
+            headers = top_row
+        elif top_row == "firstrow":
+            headers = top_row
 
-        if np.array in convert_from or list in convert_from:
+        if type(np.array()) in convert_from or list in convert_from:
             if convert_to == "latex":
-                pass
+                return tabulate(truth_table, headers=headers, tablefmt='latex')
             pass
 
         pass
