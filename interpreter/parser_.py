@@ -4,7 +4,7 @@
 # And from: http://mathcenter.oxford.emory.edu/site/cs171/shuntingYardAlgorithm/
 
 ##### IMPORTS #####
-from tokens import TokenType
+from interpreter.definitions.tokens import TokenType
 
 ##### PRECEDENCE TABLE #####
 

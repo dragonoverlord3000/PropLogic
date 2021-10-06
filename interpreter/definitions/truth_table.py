@@ -1,4 +1,4 @@
-from tokens import Token, TokenType
+from interpreter.definitions.tokens import Token, TokenType
 
 # The important part is the `truth_table_dict` at the bottom
 

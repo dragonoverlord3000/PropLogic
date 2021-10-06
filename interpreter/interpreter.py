@@ -1,12 +1,12 @@
 ##### IMPORTS #####
 import numpy as np
+from tabulate import tabulate
 
-from truth_table import truth_table_dict
-from tokens import TokenType, Token
+from interpreter.definitions.truth_table import truth_table_dict
+from interpreter.definitions.tokens import TokenType, Token
 from math import floor
 import time
 
-from tabulate import tabulate
 
 ##### VARIABLES #####
 connectives = [TokenType.NEGATION, TokenType.CONJUNCTION, TokenType.DISJUNCTION, 
@@ -71,7 +71,7 @@ class Interpreter:
         idx = 0
         start_time = time.time()
 
-        while len(evaluated) > 1 and time.time() - start_time < run_time:
+        while len(evaluated) > 1 and ((time.time() - start_time) < run_time):
             # Handle propositional variables according to the given truth assignment
             if evaluated[idx].type == TokenType.PROPVAR:
                 evaluated[idx] = Token(TokenType.TRUE) if truth_assignment[evaluated[idx].value] else Token(TokenType.FALSE)
@@ -100,7 +100,7 @@ class Interpreter:
                 - array -> will return a truth table array
                 - png -> will create a PNG image of the truth table
                 - pdf -> will create a pdf (using PyLatex)
-                - latex -> will print a string of latex code by creating a pdf (using PyLatex) and then reading off the table part of the '.tex' file
+                - latex -> will print a string of latex code by creating a pdf (using 'tabulate')
         
         Returns (png file, str, pdf file):
             Depends on the 'style' you choose
@@ -109,8 +109,6 @@ class Interpreter:
         but that would be a very ineffective solution since I would be calculating every truth value from
         the beginning every time - so this implementation is more effective.
         """
-
-        # https://github.com/JAEarly/latextable and https://colab.research.google.com/drive/1Iq10lHznMngg1-Uoo-QtpTPii1JDYSQA?usp=sharing#scrollTo=K7NNR1Vg40Vo
 
         RPN = self.RPN_input
         prop_vars_temp = [var for var in RPN if var.type == TokenType.PROPVAR]
@@ -121,11 +119,8 @@ class Interpreter:
                 prop_var_vals.append(prop_var.value)
 
         connects = [con for con in RPN if con.type in connectives]
-
-        print(f"\nPropositional variables: {prop_vars}")
-
-        num_prop_vars = len(prop_vars)
         num_connects = len(connects)
+        num_prop_vars = len(prop_vars)
 
         # Populate the first columns with all possible permutations of initial truth assignments
         # Note that a dictionary is used since it's easier to refer to a specific column this way
@@ -136,8 +131,6 @@ class Interpreter:
             bools = [Token(TokenType.TRUE), Token(TokenType.FALSE)]
             col_i = [bools[floor(num_flips/num_rows * x) % 2] for x in range(num_rows)]
             truth_table[prop_const.value] = col_i
-
-        print(f"\nInitial truth assignment: {truth_table}")
 
         # So ideally - I should calculate the values in the truth table in this while loop which creates the uppermost rows containing the propositional formulas
         subformulas = []
@@ -174,9 +167,6 @@ class Interpreter:
 
             # Handle binary connectives 
             elif temp_RPN[idx].type in binary_connectives:
-                print(f"\nTemp_RPN type idx1: {temp_RPN[idx-1].type}")
-                print(f"Temp_RPN type idx2: {temp_RPN[idx-2].type}")
-
                 if temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type in symbol_types:
 
                     for n in range(2**num_prop_vars):
@@ -184,17 +174,16 @@ class Interpreter:
 
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
                 
+                # Is this case even possible ???
                 elif temp_RPN[idx - 1].type in symbol_types and temp_RPN[idx - 2].type == TokenType.SUBSTVAR:
-
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx - 2].value][n], truth_table[temp_RPN[idx-1].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx-1].value][n], truth_table[temp_RPN[idx - 2].value][n]))
 
                     subformulas.append([subformulas[-1]] + [temp_RPN[idx]] + [temp_RPN[idx-1]])
 
                 elif temp_RPN[idx - 1].type == TokenType.SUBSTVAR and temp_RPN[idx - 2].type in symbol_types:
-
                     for n in range(2**num_prop_vars):
-                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx-1].value][n], truth_table[temp_RPN[idx - 2].value][n]))
+                        temp_column.append(truth_table_dict[temp_RPN[idx].type](truth_table[temp_RPN[idx - 2].value][n], truth_table[temp_RPN[idx-1].value][n]))
 
                     subformulas.append([temp_RPN[idx-2]] + [temp_RPN[idx]] + [subformulas[-1]])
 
@@ -211,7 +200,6 @@ class Interpreter:
 
                 substvar = Token(TokenType.SUBSTVAR, identifier)
                 temp_RPN = temp_RPN[:idx-2] + [substvar] + temp_RPN[idx+1:]
-                print(f"temp_column: {temp_column}")
                 truth_table[substvar.value] = temp_column # Test
                 identifier += 1
                 idx -= 2 # We remove three characters and add one, so our index should go two back
@@ -219,12 +207,21 @@ class Interpreter:
             idx += 1
 
         top_row = prop_vars + subformulas
-        print(f"\nTop row: {top_row}")
-        print(f"\nTruth table: {truth_table}")
-        print(f"\nSubformulas: {subformulas}")
-        # Table should be (2**num_prop_vars + 1) x (num_prop_vars + num_connectives)
+        
+        ret_truth_table = []
+        num_substvar = 0
+        for header in top_row:
+            if type(header) == list:
+                ret_truth_table.append([subformulas[num_substvar]] + truth_table[num_substvar])
+                num_substvar += 1
+            elif header.type == TokenType.PROPVAR:
+                ret_truth_table.append([[header]] + truth_table[header.value])
+            else:
+                print(f"\nError, could not convert/identify {header}")
 
-        return truth_table, top_row
+        # Transpose the truth table - https://stackoverflow.com/a/6473727/13096923
+        ret_truth_table = np.array(ret_truth_table).T.tolist()
+        return ret_truth_table
 
     def truth_table_converter(self, truth_table,  top_row="firstrow", convert_from=list, convert_to="latex"):
         """
@@ -271,6 +268,9 @@ class Interpreter:
         Should maybe be a part of the 'tableau_method' method
         """
         pass
+
+    def CLI_printer(self, truth_table, headers="firstrow"):
+        print(tabulate(truth_table, headers=headers))
 
 
 

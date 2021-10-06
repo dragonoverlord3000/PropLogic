@@ -1,7 +1,9 @@
-from tokens import Token, TokenType
-from lexer import Lexer
-from parser_ import Parser
-from interpreter import Interpreter
+from interpreter.definitions.tokens import Token, TokenType
+from interpreter.lexer import Lexer
+from interpreter.parser_ import Parser
+from interpreter.interpreter import Interpreter
+from convert.from_truth_table import to_latex
+
 
 # truth_dict = {"T": True, "t": True, "F": False, "f": False}
 
@@ -30,8 +32,9 @@ def main():
         interpreted = Interpreter(RPN)
         # evaluated_expr = interpreted.calculate_truth_assignment(truth_dict)
         # print(f"\nEvaluated expression: ('{evaluated_expr}')\n")
-        tt, tr = interpreted.setup_truth_table()
+        tt = interpreted.setup_truth_table()
         print(f"\nTruth table: {tt}")
+        print(f"\nLatex truth table: \n{to_latex(tt)}")
         # print(f"\nTruth table Latex: \n{interpreted.truth_table_converter(tt, tr)}")
 
 
