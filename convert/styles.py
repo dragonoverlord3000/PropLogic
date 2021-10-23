@@ -16,6 +16,8 @@ style_1_ltx = {TokenType.TRUE: "T", TokenType.FALSE: "F", TokenType.PROPVAR: lam
 style_dict = {"style_1": style_1, "style_1_ltx": style_1_ltx}
 
 ########### STYLE CONVERTERS ###########
+
+# Convert token styles
 def style_converter_token(inp:Token, style_str:str="style_1"):
     """
     Args:
@@ -36,6 +38,8 @@ def style_converter_token(inp:Token, style_str:str="style_1"):
     else:
         print(f"Error, could not style '{inp}' using style: '{style_str}'")
 
+
+# Convert truth table styles
 def style_converter_truth_table(truth_table:list, style_str:str="style_1"):
     n_truth_table = truth_table
 
@@ -65,5 +69,10 @@ def style_converter_truth_table(truth_table:list, style_str:str="style_1"):
     print(f"Truth table: \n{truth_table}")
 
     return n_truth_table
+
+# Convert tableaux style
+
+
+
 
 

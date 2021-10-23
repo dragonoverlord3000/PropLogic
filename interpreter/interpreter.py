@@ -3,6 +3,8 @@ import numpy as np
 from tabulate import tabulate
 
 from interpreter.definitions.truth_table import truth_table_dict
+from interpreter.definitions.decomp_rules import decomp_rule_dict
+from interpreter.definitions.tableaux_tree import Node
 from interpreter.definitions.tokens import TokenType, Token
 from math import floor
 import time
@@ -253,15 +255,101 @@ class Interpreter:
         pass
 
     def create_parse_tree(self) -> str:
-        """
-        https://stackoverflow.com/questions/7670280/tree-plotting-in-python
-        """
+        # https://stackoverflow.com/questions/7670280/tree-plotting-in-python
         pass
 
-    def tableau_method(self) -> str:
-        # https://plotly.com/python/tree-plots/
-        # https://github.com/JAEarly/latextable
-        pass
+    def tableau_method(self, assump=True) -> str:         
+        # https://plotly.com/python/tree-plots/#create-text-inside-the-circle-via-annotations
+        
+        RPN = self.RPN_input
+        prefix = RPN[::-1] # Note this isn't exactly prefix - the order of symbols are swapped! This is important and is reflected in some assymeytries in the code - like 'node 1' having the truth value 'True'
+
+        # class Node: 
+        #     # Initialize the attributes of Node
+        #     def __init__(self, formula=None, truth=None, decomp_rule=None):
+        #         self.left = None # Left Child
+        #         self.right = None # Right Child
+        #         self.idx = None # The index of the formula
+        #         self.formula = formula # Node Data
+        #         self.truth = truth # The truth of the formula
+        #         self.decomp_rule = decomp_rule # The decomposition rule used to get this node
+
+        #     def __repr__(self):
+        #         right_str = f"\n\n Right: \n\t {self.right}" if self.right else ""
+        #         left_str = f"\n\n Left: \n\t {self.left}" if self.left else ""
+
+        #         return f"Idx: [{self.idx}] - Formula: {self.formula}: {self.truth}{left_str}{right_str}"
+
+        # Creates the tree recursively <3
+        def setup_tree(prefix, truth=True):
+            skip_total = 1
+            root = Node(truth=truth)
+            token = prefix[0]
+
+            if token.type in symbol_types:
+                root.formula = [token]
+
+            elif token.type in unary_connectives:
+                _, bool_val = decomp_rule_dict[token.type](truth)[0]
+                node, skip_add = setup_tree(prefix[1:], bool_val)
+                skip_total += skip_add
+                root.formula = [token, Token(TokenType.LPAREN)] + node.formula + [Token(TokenType.RPAREN)]
+                root.left = node
+
+            elif token.type in binary_connectives:
+                decomp = decomp_rule_dict[token.type](truth)
+                if len(decomp) == 1:
+                    _, bool_val_1, bool_val_2 = decomp[0]
+                    node_1, skip_add = setup_tree(prefix[1:], truth=bool_val_2)
+                    skip_total += skip_add
+                    node_2, skip_add = setup_tree(prefix[skip_total:], truth=bool_val_1)
+                    skip_total += skip_add
+                    root.formula = [Token(TokenType.LPAREN)] + node_2.formula + [token] + node_1.formula + [Token(TokenType.RPAREN)]
+                    if bool_val_1 != None and bool_val_2 != None:
+                        root.left = [node_2, node_1]
+                    elif bool_val_1 != None and bool_val_2 == None:
+                        root.left = node_1
+                    elif bool_val_1 == None and bool_val_2 != None:
+                        root.left = node_2 
+
+                if len(decomp) == 2:
+                    skip_total_extra = skip_total
+                    (_, bool_val_1, bool_val_2), (_, bool_val_3, bool_val_4) = decomp[0], decomp[1]
+
+                    node_1, skip_add = setup_tree(prefix[1:], truth=bool_val_2)
+                    skip_total += skip_add
+                    node_2, skip_add = setup_tree(prefix[skip_total:], truth=bool_val_1)
+                    skip_total += skip_add
+
+                    node_3, skip_add = setup_tree(prefix[1:], truth=bool_val_4)
+                    skip_total_extra += skip_add
+                    node_4, skip_add = setup_tree(prefix[skip_total_extra:], truth=bool_val_3)
+                    skip_total_extra += skip_add
+
+                    root.formula = [Token(TokenType.LPAREN)] + node_2.formula + [token] + node_1.formula + [Token(TokenType.RPAREN)]
+
+                    if bool_val_1 != None and bool_val_2 != None:
+                        root.left = [node_2, node_1]
+                    elif bool_val_1 != None and bool_val_2 == None:
+                        root.left = node_2
+                    elif bool_val_1 == None and bool_val_2 != None:
+                        root.left = node_1
+
+                    if bool_val_3 != None and bool_val_4 != None:
+                        root.right = [node_4, node_3]
+                    elif bool_val_3 != None and bool_val_4 == None:
+                        root.right = node_4
+                    elif bool_val_3 == None and bool_val_4 != None:
+                        root.right = node_3
+            
+            return root, skip_total
+
+        tree, _ = setup_tree(prefix)
+        return tree
+
+
+                
+
 
     def check_tautology(self) -> bool:
         """
@@ -272,7 +360,8 @@ class Interpreter:
     def CLI_printer(self, truth_table, headers="firstrow"):
         print(tabulate(truth_table, headers=headers))
 
-
+    def RPN_to_Infix(self, RPN):
+        pass
 
 
 

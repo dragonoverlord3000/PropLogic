@@ -32,10 +32,11 @@ def main():
         interpreted = Interpreter(RPN)
         # evaluated_expr = interpreted.calculate_truth_assignment(truth_dict)
         # print(f"\nEvaluated expression: ('{evaluated_expr}')\n")
-        tt = interpreted.setup_truth_table()
-        print(f"\nTruth table: {tt}")
-        print(f"\nLatex truth table: \n{to_latex(tt)}")
+        # tt = interpreted.setup_truth_table()
+        # print(f"\nTruth table: {tt}")
+        # print(f"\nLatex truth table: \n{to_latex(tt)}")
         # print(f"\nTruth table Latex: \n{interpreted.truth_table_converter(tt, tr)}")
+        print(f"Tableaux: ---- \n{interpreted.tableau_method()} \n ----")
 
 
 
